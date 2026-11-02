@@ -1,0 +1,39 @@
+const IMAGE=/^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function cleanProductPlacement(value){
+ if(value==null)return null;
+ if(typeof value!=='object'||!IMAGE.test(value.src)||value.src.length>16000000)throw Error('교체 상품 사진 형식을 확인하세요.');
+ const v={src:value.src,name:String(value.name||'상품 사진').slice(0,150)};
+ for(const [key,min,max]of [['x',0,100],['y',0,100],['w',0.001,100],['h',0.001,100]]){if(typeof value[key]!=='number'||!Number.isFinite(value[key])||value[key]<min||value[key]>max)throw Error('상품 사진 위치·크기 범위를 확인하세요.');v[key]=value[key]}
+ if(v.x+v.w>100.01||v.y+v.h>100.01)throw Error('상품 사진은 배경 영역 안에 배치하세요.');
+ return v;
+}
+export function productPlacementHTML(photo,overlays,index){
+ if(!photo.productPlacement)return null;const p=cleanProductPlacement(photo.productPlacement);
+ return '<div class="photo-text-image product-placement-image" data-photo-index="'+index+'"><img class="product-image" src="'+esc(photo.src)+'" alt="보존된 배경"><img class="placed-product" src="'+esc(p.src)+'" alt="'+esc(p.name)+'" style="left:'+p.x+'%;top:'+p.y+'%;width:'+p.w+'%;height:'+p.h+'%">'+overlays+'</div>';
+}
+export function setupProductPlacement({getPhotos,apply,tell}){
+ const d=document.createElement('dialog');d.id='product-placement-dialog';d.innerHTML='<h2>상품 사진 교체 · 자동 맞춤</h2><p><strong>① 상품 사진 선택 → ② 자동 맞춤 → ③ 끌어서 조절 → ④ 적용</strong><br>기존 배경과 문구는 그대로 두고 상품 사진만 배치합니다.</p><p class="pp-hint">배경에 이미 인쇄된 상품은 자동으로 지워지지 않습니다. 상품이 없는 배경과 투명 PNG를 사용하면 자연스럽습니다. 흰 배경 사진은 흰색도 함께 표시됩니다.</p><div class="pp-tools"><label class="button">상품 사진 선택·교체<input id="pp-file" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><button id="pp-fit">영역에 자동 맞춤</button><button id="pp-center">가운데 배치</button><button id="pp-remove">배치 제외</button></div><details class="pp-advanced"><summary>자세한 조절 · 숫자로 맞추기</summary><div class="pp-tools"><label>가로 위치 (%)<input id="pp-x" type="number" min="0" max="100" step="0.1"></label><label>세로 위치 (%)<input id="pp-y" type="number" min="0" max="100" step="0.1"></label><label>사진 폭 (%)<input id="pp-w" type="number" min="1" max="100" step="0.1"></label><span id="pp-dimensions"></span></div></details><p class="pp-hint">사진을 끌면 이동 · 모서리 손잡이를 끌면 비율 유지 크기 조절 · 적용 전에는 원본 유지</p><div id="pp-stage" class="photo-text-image"><img id="pp-background" alt="보존할 배경"><div id="pp-object" tabindex="0" aria-label="이동할 상품 사진" hidden><img id="pp-product" alt="교체 상품 사진" draggable="false"><button id="pp-handle" aria-label="상품 사진 비율 유지 크기 조절" type="button"></button></div><div id="pp-overlays"></div></div><p id="pp-status" role="status"></p><div class="pp-tools pp-actions"><button id="pp-apply" class="primary">적용</button><button id="pp-cancel">취소</button></div>';
+ document.body.append(d);const $=s=>d.querySelector(s);let index=-1,original='',draft=null,ratio=1,drag=null,busy=false,sequence=0;
+ const status=t=>$('#pp-status').textContent=t;
+ const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('사진을 읽지 못했습니다.'));im.src=src});
+ function bounds(){const im=$('#pp-background');return{w:im.naturalWidth,h:im.naturalHeight}}
+ function maxWidth(){const b=bounds();return Math.min(100,100*b.h*ratio/b.w)}
+ function normalize(){if(!draft)return;draft.w=Math.max(Math.min(1,maxWidth()),Math.min(maxWidth(),draft.w));const b=bounds();draft.h=draft.w*b.w/ratio/b.h;draft.x=Math.max(0,Math.min(100-draft.w,draft.x));draft.y=Math.max(0,Math.min(100-draft.h,draft.y))}
+ function draw(){if(!busy)normalize();const box=$('#pp-object');box.hidden=!draft;for(const id of ['#pp-fit','#pp-center','#pp-remove','#pp-x','#pp-y','#pp-w'])$(id).disabled=!draft||busy;$('#pp-apply').disabled=busy;$('#pp-file').disabled=busy;
+ if(!draft){$('#pp-dimensions').textContent='상품 사진을 선택하세요.';return}
+ $('#pp-product').src=draft.src;box.style.cssText='left:'+draft.x+'%;top:'+draft.y+'%;width:'+draft.w+'%;height:'+draft.h+'%';for(const key of ['x','y','w'])$('#pp-'+key).value=String(Math.round(draft[key]*100)/100);$('#pp-dimensions').textContent='높이 '+draft.h.toFixed(1)+'% · 비율 유지';}
+ function fit(){if(!draft)return;draft.w=maxWidth()*.8;normalize();center()}
+ function center(){if(!draft)return;draft.x=(100-draft.w)/2;draft.y=(100-draft.h)/2;draw()}
+ $('#pp-file').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;const ticket=++sequence;busy=true;draw();try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10000000)throw Error('PNG/JPG/WebP 10MB 이하 사진을 선택하세요.');const src=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('파일을 읽지 못했습니다.'));r.readAsDataURL(file)});const im=await load(src);if(ticket!==sequence||!d.open)return;ratio=im.naturalWidth/im.naturalHeight;const previous=draft;draft={src,name:file.name,x:previous?.x||0,y:previous?.y||0,w:previous?.w||80,h:1};if(previous){const b=bounds(),fitW=Math.min(previous.w,previous.h*b.h*ratio/b.w);draft.w=fitW;normalize();draft.x=previous.x+(previous.w-draft.w)/2;draft.y=previous.y+(previous.h-draft.h)/2}else fit();status('새 상품 사진을 배치했습니다. 배경·문구는 유지됩니다.');}catch(e){status(e.message)}finally{if(ticket===sequence){busy=false;draw()}}};
+ $('#pp-fit').onclick=fit;$('#pp-center').onclick=center;$('#pp-remove').onclick=()=>{draft=null;draw();status('적용하면 추가 상품 사진만 배치에서 제외합니다. 원본 배경은 유지됩니다.')};
+ for(const k of ['x','y','w'])$('#pp-'+k).oninput=e=>{if(!draft||!Number.isFinite(e.target.valueAsNumber))return;draft[k]=e.target.valueAsNumber;draw()};
+ $('#pp-object').onpointerdown=e=>{if(!draft||busy)return;const r=$('#pp-stage').getBoundingClientRect();drag={x:e.clientX,y:e.clientY,start:{...draft},width:r.width,height:r.height,resize:!!e.target.closest('#pp-handle')};$('#pp-object').setPointerCapture(e.pointerId);$('#pp-object').focus();e.preventDefault()};
+ $('#pp-object').onpointermove=e=>{if(!drag||!draft)return;const dx=(e.clientX-drag.x)/drag.width*100,dy=(e.clientY-drag.y)/drag.height*100;
+ if(drag.resize){const vx=drag.start.w*drag.width/100,vy=drag.start.h*drag.height/100,px=e.clientX-drag.x,py=e.clientY-drag.y;draft.w=drag.start.w*(1+(px*vx+py*vy)/(vx*vx+vy*vy));const limit=Math.min(100-drag.start.x,(100-drag.start.y)*bounds().h*ratio/bounds().w);draft.w=Math.min(limit,draft.w);draft.x=drag.start.x;draft.y=drag.start.y}else{draft.x=drag.start.x+dx;draft.y=drag.start.y+dy}draw()};
+ for(const ev of ['pointerup','pointercancel','lostpointercapture'])$('#pp-object').addEventListener(ev,()=>drag=null);
+ $('#pp-object').onkeydown=e=>{if(!draft||!e.key.startsWith('Arrow'))return;e.preventDefault();const n=e.shiftKey?1:.1;draft.x+=(e.key==='ArrowRight'?n:e.key==='ArrowLeft'?-n:0);draft.y+=(e.key==='ArrowDown'?n:e.key==='ArrowUp'?-n:0);draw()};
+ $('#pp-cancel').onclick=()=>d.close();d.addEventListener('close',()=>{sequence++;busy=false;drag=null});
+ $('#pp-apply').onclick=()=>{if(busy)return;const p=getPhotos()[index];if(!p||JSON.stringify(p)!==original)return status('사진이 다른 곳에서 변경됐습니다. 창을 다시 열어 주세요.');try{const next=cleanProductPlacement(draft);if(JSON.stringify(p.productPlacement||null)!==JSON.stringify(next))apply(index,next);d.close();tell('상품 사진 배치를 적용했습니다. 프로젝트·PNG·HTML 저장에 반영됩니다.')}catch(e){status(e.message)}};
+ return{async open(i,overlayHTML){const p=getPhotos()[i];if(!p)return;index=i;original=JSON.stringify(p);draft=cleanProductPlacement(p.productPlacement);busy=true;$('#pp-overlays').innerHTML=overlayHTML;$('#pp-background').src=p.src;draw();d.showModal();const ticket=++sequence;try{await load(p.src);if(draft){const im=await load(draft.src);ratio=im.naturalWidth/im.naturalHeight}if(ticket!==sequence||!d.open)return;busy=false;draw();status('사진을 선택하거나 기존 상품 사진을 드래그하세요. 적용 전에는 원본을 변경하지 않습니다.')}catch(e){if(ticket===sequence){busy=false;status(e.message)}}}};
+}

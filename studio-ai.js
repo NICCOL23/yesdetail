@@ -1,11 +1,15 @@
 import{validateDraft}from'./ai-draft-contract.mjs';
 export function setupAI({getState,applyDraft,page,tell,findPhotos}){
  const $=s=>document.querySelector(s);let service=null,pending=null,controller=null,busy=false;
+ const local=/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:';
+ const connectionHelp=local?'AI 서버 미연결 · 작업을 저장한 뒤 소스 폴더의 AI 연결 실행.cmd를 실행하세요.':'AI 서버 미연결 · 웹 AI 서버가 아직 연결되지 않았습니다. 사이트 관리자에게 연결을 요청하세요. 사진 편집·저장은 계속 사용할 수 있습니다.';
+ const keyHelp=local?'키를 설정해야 사용할 수 있습니다. AI 연결 실행.cmd를 실행하세요.':'AI 키 미설정 · 사이트 관리자가 서버에 API 키를 설정해야 합니다. 이 화면이나 프로젝트에 키를 입력하지 마세요.';
+ $('#ai-local-help').hidden=!local;$('#ai-web-help').hidden=local;
  const provider=()=>$('#ai-provider').value;
  const name=p=>p==='openai'?'OpenAI · 유료':'Gemini · 무료 등급 전용';
- const errorText=async response=>{let body;try{body=await response.json()}catch{}throw Error(body?.error||'AI 서버를 사용할 수 없습니다. 작업을 저장한 뒤 AI 연결 실행.cmd를 실행하세요.')};
- async function refresh(){try{const res=await fetch('/api/ai/status',{cache:'no-store'});if(!res.ok)return await errorText(res);service=await res.json();showStatus()}catch{service=null;$('#ai-connection-status').textContent='AI 서버 미연결 · 작업을 저장한 뒤 소스 폴더의 AI 연결 실행.cmd를 실행하세요.'}}
- function showStatus(){const s=service?.[provider()];$('#ai-connection-status').textContent=!s?'AI 서버 미연결':s.stopped?'한도 도달 · 자동 전환 없이 중지':s.enabled?name(provider())+' 설정됨 · 오늘 안전 제한 '+(s.budget?.used??0)+'/'+(s.budget?.limit??6)+'회 · 자동 전환 없음':'API 키/실행 설정 필요 · AI 연결 실행.cmd';}
+ const errorText=async response=>{let body;try{body=await response.json()}catch{}throw Error(body?.error||connectionHelp)};
+ async function refresh(){try{const res=await fetch('/api/ai/status',{cache:'no-store'});if(!res.ok)return await errorText(res);service=await res.json();showStatus()}catch{service=null;$('#ai-connection-status').textContent=connectionHelp}}
+ function showStatus(){const s=service?.[provider()];$('#ai-connection-status').textContent=!s?'AI 서버 미연결':s.stopped?'한도 도달 · 자동 전환 없이 중지':s.enabled?name(provider())+' 설정됨 · 오늘 안전 제한 '+(s.budget?.used??0)+'/'+(s.budget?.limit??6)+'회 · 자동 전환 없음':keyHelp;}
  $('#ai-provider').onchange=()=>{pending=null;$('#gemini-model-label').hidden=provider()!=='gemini';showStatus()};
  $('#ai-plan').onclick=()=>{$('#ai-dialog').showModal();refresh()};$('#close-ai-plan').onclick=()=>$('#ai-dialog').close();$('#refresh-ai').onclick=refresh;
  function selectedPhotos(){return[...$('#ai-photo-choices').querySelectorAll('input:checked')].map(input=>getState().photos[Number(input.value)])}
@@ -21,7 +25,7 @@ export function setupAI({getState,applyDraft,page,tell,findPhotos}){
   if(busy)return;const p=provider(),chosen=selectedPhotos();$('#ai-request-error').textContent='';
   if(chosen.length<1||chosen.length>3){$('#ai-request-error').textContent='분석할 사진을 1~3장 선택하세요.';return}
   if(p==='openai'&&!$('#ai-paid-consent').checked){$('#ai-request-error').textContent='OpenAI는 유료입니다. 이번 요청의 유료 사용을 확인하세요.';return}
-  if(!service?.[p]?.enabled||service[p].stopped){$('#ai-request-error').textContent=service?.[p]?.stopped||'키를 설정해야 사용할 수 있습니다. AI 연결 실행.cmd를 실행하세요.';return}
+  if(!service?.[p]?.enabled||service[p].stopped){$('#ai-request-error').textContent=service?.[p]?.stopped||(service?keyHelp:connectionHelp);return}
   const original=JSON.stringify(getState());controller=new AbortController();setBusy(true);
   try{
    const images=await Promise.all(chosen.map(resized));if(controller.signal.aborted)return;

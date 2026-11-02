@@ -1,3 +1,4 @@
+import{savePagePNG}from'./studio-png.js';
 import{setupStudioCaptureTransfer}from'./studio-capture-transfer.js';
 import{cleanPhotoText,photoTextHTML,setupPhotoText}from'./photo-text.js';
 import{setupImageSearch}from'./studio-image-search.js';
@@ -52,6 +53,7 @@ $('#pc').onclick=()=>{$('#page-mount').style.maxWidth='860px';$('#view-label').t
 const readFile=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('파일을 읽지 못했습니다.'));reader.readAsDataURL(file)});
 $('#photos').onchange=async e=>{try{const files=[...e.target.files];if(files.length+state.photos.length>30)throw Error('사진은 최대 30장입니다.');const list=[];for(const file of files){if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10000000)throw Error('PNG/JPG/WebP, 장당 10MB까지 가능합니다.');const src=await readFile(file);if(![...state.photos,...list].some(p=>p.src===src))list.push({id:crypto.randomUUID(),name:file.name,src,kind:'product'})}if(list.length){checkpoint();state.photos.push(...list);render()}tell(list.length+'장 추가 · 동일 파일의 중복은 제외했습니다.')}catch(error){tell(error.message)}finally{e.target.value=''}};
 function download(content,type,name){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);tell('브라우저에 다운로드를 요청했습니다. 다운로드 목록을 확인하세요.')}
+$('#export-png').onclick=async()=>{const button=$('#export-png');if(button.disabled)return;if(!state.product.name.trim()||!state.photos.length){tell('PNG 저장 전에 상품명과 사진을 추가하세요.');return}button.disabled=true;tell('PNG를 준비하고 있습니다. 사진·폰트를 확인합니다…');try{const result=await savePagePNG(page(clone(state)));download(result.blob,'image/png','YesDetail-완성페이지.png');tell('860 × '+result.height+'px PNG 다운로드를 요청했습니다. 다운로드 목록을 확인하세요.')}catch(e){tell('PNG 저장 실패: '+e.message)}finally{button.disabled=false}};
 $('#save-project').onclick=()=>download(JSON.stringify(state,null,2),'application/json','YesDetail-새제작-프로젝트.json');
 $('#export-html').onclick=async()=>{try{await document.fonts.ready;let css=await(await fetch('studio-next.css')).text();const font=await(await fetch('assets/fonts/PretendardVariable.woff2')).blob(),fontData=await readFile(font);css=css.replace("url('assets/fonts/PretendardVariable.woff2')",`url('${fontData}')`);download('<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(state.product.name)+'</title><style>'+css+'body{background:#fafaf6}.sales-page{max-width:860px;margin:auto}[data-edit]{cursor:default}[data-edit]:hover{outline:none}</style><body>'+page()+'</body></html>','text/html','YesDetail-완성페이지.html')}catch(e){tell('HTML 저장 준비 실패: '+e.message)}};
 $('#save-version').onclick=async()=>{try{const stamp=Date.now();await projectStore.set('yesdetail-simple-version:'+stamp+':'+crypto.randomUUID(),{savedAt:stamp,state:clone(state)});tell('현재 버전을 별도로 보관했습니다. 기존 작업은 덮어쓰지 않습니다.')}catch(e){tell('버전 보관 실패: '+e.message+' · 프로젝트 파일로 저장하세요.')}};
@@ -66,7 +68,7 @@ for(const [id,key]of [['draft-lead','lead'],['draft-body','body']]){
 
 const ai=setupAI({getState:()=>state,page,tell,findPhotos:()=>imageSearch.open(),applyDraft:draft=>{checkpoint();state.draft=draft;render();setStep(3)}});
 
-const imageSearch=setupImageSearch({getState:()=>state,tell,addPhotos:photos=>{const list=photos.filter(p=>!state.photos.some(old=>old.src===p.src));if(list.length+state.photos.length>30)throw Error('사진은 최대 30장입니다.');if(list.length){checkpoint();state.photos.push(...list);render()}},onReady:()=>ai.open()});
+const imageSearch=setupImageSearch({getState:()=>state,tell,addPhotos:photos=>{const list=photos.filter(p=>!state.photos.some(old=>old.src===p.src));if(list.length+state.photos.length>30)throw Error('사진은 최대 30장입니다.');if(list.length){checkpoint();state.photos.push(...list);render()}}});
 
 const photoText=setupPhotoText({getPhotos:()=>state.photos,tell,apply:(index,layers)=>{checkpoint();state.photos[index].textOverlays=layers;render()}});
 

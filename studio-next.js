@@ -1,4 +1,4 @@
-import{cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261102-3';
+import{cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261102-bg1';
 import{savePagePNG,savePageSplitPNG}from'./studio-png.js';
 import{setupStudioCaptureTransfer}from'./studio-capture-transfer.js';
 import{cleanPhotoText,photoTextHTML,setupPhotoText}from'./photo-text.js';

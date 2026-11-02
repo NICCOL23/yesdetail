@@ -25,3 +25,7 @@
 
 /* Optional, non-destructive solid covers underneath photo text. */
 .photo-cover-layer{position:absolute;display:block;pointer-events:none;line-height:0}.photo-text-image>.photo-cover-layer{z-index:1}.photo-text-image>.photo-text-layer{z-index:2}#pt-covers{position:absolute;inset:0;pointer-events:none;z-index:1}#pt-layers{z-index:2}.cover-draw-mode{cursor:crosshair;touch-action:none}.cover-draw-mode #pt-layers{pointer-events:none}.cover-draw-mode .pt-draggable{pointer-events:none}.photo-cover-tools{margin:8px 0 16px;padding:12px;border:1px solid #cbd5ca;border-radius:8px}.photo-cover-tools p{font-size:13px;margin:6px 0}.cover-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.cover-controls label{display:flex;flex-direction:column;font-size:13px}.cover-controls input[type=color]{width:65px;height:42px}.cover-controls select{max-width:140px;min-height:42px}.cover-controls [aria-pressed=true]{background:#264638;color:white}
+
+/* Center anchor applies only to text explicitly centered with the new editor controls. */
+.photo-text-layer.photo-text-centered{width:max-content;max-width:100%;transform:translateX(-50%)}
+#pt-center-guide{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#ec2b90;z-index:3;pointer-events:none;box-shadow:0 0 0 1px #fff8}#pt-center-guide[hidden]{display:none} .photo-text-controls .pt-snap-control{display:flex;flex-direction:row;align-items:center;gap:6px}.pt-snap-control input{width:auto}

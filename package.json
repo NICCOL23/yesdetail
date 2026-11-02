@@ -1,0 +1,24 @@
+{
+  "name": "yesdetail",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check app.js && node --check product-studio.js && node --check food-editorial.js && node --check generation-provider.js && node --check server.mjs && node --check studio-next.js && node --check studio-ai.js && node --check ai-provider-server.mjs && node --check server-ai.mjs",
+    "build": "esbuild src/editor.jsx --bundle --format=esm --minify --outfile=assets/react-editor.js",
+    "test": "node tests/studio-regression.cjs && node tests/image-brief.mjs && node tests/capture-regression.cjs",
+    "test:ai": "node tests/ai-provider-v2.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "description": "YesDetail예스디테일 — 상품 상세페이지 제작기",
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

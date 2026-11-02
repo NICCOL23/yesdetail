@@ -1,0 +1,10 @@
+const port=Number(process.env.YESDETAIL_PORT||4173);
+import {createApp} from './server-ai.mjs';
+import {execFile} from 'node:child_process';
+const openBrowser=()=>{if(process.argv.includes('--open')&&process.platform==='win32')try{execFile('rundll32.exe',['url.dll,FileProtocolHandler','http://127.0.0.1:'+port+'/'],{windowsHide:true},error=>{if(error)console.error('브라우저에서 직접 열어 주세요: http://127.0.0.1:4173/');});}catch{console.log('브라우저에서 열기: http://127.0.0.1:4173/');}};
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const server=createApp({root});
+server.listen(port,'127.0.0.1',()=>{console.log('YesDetail예스디테일: http://127.0.0.1:'+port);openBrowser();});
+server.on('error',e=>{if(e.code==='EADDRINUSE'){console.log('포트 4173에서 이전 서버가 실행 중입니다. 프로젝트를 저장하고 이전 서버 창을 닫은 뒤 다시 실행하세요.');process.exitCode=1;return;}console.error(e);process.exitCode=1;});

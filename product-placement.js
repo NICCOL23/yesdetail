@@ -17,6 +17,8 @@ export function setupProductPlacement({getPhotos,apply,tell}){
  document.body.append(d);const $=s=>d.querySelector(s);let index=-1,original='',draft=null,ratio=1,drag=null,busy=false,sequence=0;
  const status=t=>$('#pp-status').textContent=t;
  const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('사진을 읽지 못했습니다.'));im.src=src});
+ function fitView(){const b=$('#pp-background');if(b.naturalWidth&&b.naturalHeight)$('#pp-stage').style.maxWidth=Math.min(640,Math.max(180,window.innerHeight-460)*b.naturalWidth/b.naturalHeight)+'px'}
+ window.addEventListener('resize',()=>{if(d.open)fitView()});
  function bounds(){const im=$('#pp-background');return{w:im.naturalWidth,h:im.naturalHeight}}
  function maxWidth(){const b=bounds();return Math.min(100,100*b.h*ratio/b.w)}
  function normalize(){if(!draft)return;draft.w=Math.max(Math.min(1,maxWidth()),Math.min(maxWidth(),draft.w));const b=bounds();draft.h=draft.w*b.w/ratio/b.h;draft.x=Math.max(0,Math.min(100-draft.w,draft.x));draft.y=Math.max(0,Math.min(100-draft.h,draft.y))}
@@ -35,5 +37,5 @@ export function setupProductPlacement({getPhotos,apply,tell}){
  $('#pp-object').onkeydown=e=>{if(!draft||!e.key.startsWith('Arrow'))return;e.preventDefault();const n=e.shiftKey?1:.1;draft.x+=(e.key==='ArrowRight'?n:e.key==='ArrowLeft'?-n:0);draft.y+=(e.key==='ArrowDown'?n:e.key==='ArrowUp'?-n:0);draw()};
  $('#pp-cancel').onclick=()=>d.close();d.addEventListener('close',()=>{sequence++;busy=false;drag=null});
  $('#pp-apply').onclick=()=>{if(busy)return;const p=getPhotos()[index];if(!p||JSON.stringify(p)!==original)return status('사진이 다른 곳에서 변경됐습니다. 창을 다시 열어 주세요.');try{const next=cleanProductPlacement(draft);if(JSON.stringify(p.productPlacement||null)!==JSON.stringify(next))apply(index,next);d.close();tell('상품 사진 배치를 적용했습니다. 프로젝트·PNG·HTML 저장에 반영됩니다.')}catch(e){status(e.message)}};
- return{async open(i,overlayHTML){const p=getPhotos()[i];if(!p)return;index=i;original=JSON.stringify(p);draft=cleanProductPlacement(p.productPlacement);busy=true;$('#pp-overlays').innerHTML=overlayHTML;$('#pp-background').src=p.src;draw();d.showModal();const ticket=++sequence;try{await load(p.src);if(draft){const im=await load(draft.src);ratio=im.naturalWidth/im.naturalHeight}if(ticket!==sequence||!d.open)return;busy=false;draw();status('사진을 선택하거나 기존 상품 사진을 드래그하세요. 적용 전에는 원본을 변경하지 않습니다.')}catch(e){if(ticket===sequence){busy=false;status(e.message)}}}};
+ return{async open(i,overlayHTML){const p=getPhotos()[i];if(!p)return;index=i;original=JSON.stringify(p);draft=cleanProductPlacement(p.productPlacement);busy=true;$('#pp-overlays').innerHTML=overlayHTML;$('#pp-background').src=p.src;draw();d.showModal();const ticket=++sequence;try{await load(p.src);if(draft){const im=await load(draft.src);ratio=im.naturalWidth/im.naturalHeight}if(ticket!==sequence||!d.open)return;busy=false;fitView();draw();status('사진을 선택하거나 기존 상품 사진을 드래그하세요. 적용 전에는 원본을 변경하지 않습니다.')}catch(e){if(ticket===sequence){busy=false;status(e.message)}}}};
 }

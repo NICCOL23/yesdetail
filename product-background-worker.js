@@ -1,5 +1,5 @@
 /* Local U2Netp inference. All assets are same-origin; image bytes never leave this worker. */
-importScripts('./assets/background-removal/ort.wasm.min.js','./background-region.js?v=20261103-region1');
+importScripts('./assets/background-removal/ort.wasm.min.js','./background-region.js?v=20261103-region2');
 ort.env.wasm.numThreads=1;ort.env.wasm.proxy=false;ort.env.wasm.wasmPaths=new URL('./assets/background-removal/',self.location.href).href;
 let session;
 self.onmessage=async({data})=>{try{
@@ -22,5 +22,10 @@ async function inferMask(canvas,w,h){
 }
 
 async function removeRegion(data){
- const started=performance.now();postMessage({status:'선택 영역을 읽고 있습니다…'});const bitmap=await createImageBitmap(data.blob);let region;try{region=YesDetailRegion.validateRegion(data.region,bitmap.width,bitmap.height)}catch(e){bitmap.close();throw e}const w=bitmap.width,h=bitmap.height,canvas=new OffscreenCanvas(w,h),ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(bitmap,0,0);bitmap.close();const original=ctx.getImageData(0,0,w,h),crop=new OffscreenCanvas(region.w,region.h);crop.getContext('2d').drawImage(canvas,region.x,region.y,region.w,region.h,0,0,region.w,region.h);const alpha=await inferMask(crop,region.w,region.h);YesDetailRegion.applyRegionAlpha(original.data,w,h,region,alpha);postMessage({status:'선택 영역 밖을 유지하며 PNG를 만들고 있습니다…'});const blob=await YesDetailRegion.encodePNG(original.data,w,h);postMessage({blob,width:w,height:h,seconds:(performance.now()-started)/1000,resized:false,partial:true,region,alreadyTransparent:false});
+ const started=performance.now();postMessage({status:'선택 영역을 읽고 있습니다…'});const bitmap=await createImageBitmap(data.blob);let crop,strip;
+ try{const w=bitmap.width,h=bitmap.height,region=YesDetailRegion.validateRegion(data.region,w,h);crop=new OffscreenCanvas(region.w,region.h);crop.getContext('2d').drawImage(bitmap,region.x,region.y,region.w,region.h,0,0,region.w,region.h);const alpha=await inferMask(crop,region.w,region.h);crop.width=1;crop.height=1;strip=new OffscreenCanvas(w,Math.max(1,Math.min(256,Math.floor(1048576/w))));const ctx=strip.getContext('2d',{willReadFrequently:true});let visible=0;
+  postMessage({status:'원본을 줄 단위로 읽어 선택 영역 밖을 보존하며 PNG를 만들고 있습니다…'});
+  const blob=await YesDetailRegion.encodePNGStrips(w,h,(y,rows)=>{ctx.clearRect(0,0,w,strip.height);ctx.drawImage(bitmap,0,y,w,rows,0,0,w,rows);const pixels=ctx.getImageData(0,0,w,rows).data;for(let sy=Math.max(y,region.y);sy<Math.min(y+rows,region.y+region.h);sy++)for(let x=0;x<region.w;x++){const i=((sy-y)*w+region.x+x)*4,j=((sy-region.y)*region.w+x)*4;pixels[i+3]=Math.round(pixels[i+3]*alpha[j]/255);if(pixels[i+3]>8)visible++;}return pixels;});
+  if(visible<region.w*region.h*.001)throw Error('선택 영역에서 상품을 충분히 찾지 못했습니다. 원본은 유지됩니다.');postMessage({blob,width:w,height:h,seconds:(performance.now()-started)/1000,resized:false,partial:true,region,alreadyTransparent:false});
+ }finally{bitmap.close();if(crop){crop.width=1;crop.height=1;}if(strip){strip.width=1;strip.height=1;}}
 }

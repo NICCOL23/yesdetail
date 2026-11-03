@@ -1,5 +1,5 @@
 import{setupProductStart}from'./studio-start.js?v=20261103-start2';
-import{cleanCurrentPhotoRemoval,cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261102-ui1';
+import{cleanCurrentPhotoRemoval,cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261103-view1';
 import{savePagePNG,savePageSplitPNG}from'./studio-png.js';
 import{setupStudioCaptureTransfer}from'./studio-capture-transfer.js?v=20261103-start2';
 import{cleanPhotoText,photoTextHTML,setupPhotoText}from'./photo-text.js';

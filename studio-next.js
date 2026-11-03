@@ -1,5 +1,5 @@
 import{setupProductStart}from'./studio-start.js?v=20261103-start2';
-import{cleanCurrentPhotoRemoval,cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261103-region2';
+import{cleanCurrentPhotoRemoval,cleanProductPlacement,productPlacementHTML,setupProductPlacement}from'./product-placement.js?v=20261103-frame1';
 import{savePagePNG,savePageSplitPNG}from'./studio-png.js';
 import{setupStudioCaptureTransfer}from'./studio-capture-transfer.js?v=20261103-start2';
 import{cleanPhotoText,photoTextHTML,setupPhotoText}from'./photo-text.js';
@@ -28,7 +28,7 @@ function page(data=state){
  (c.order.length?'<section class="section buy"><div class="section-head"><h2>구매 전 확인</h2></div><dl class="order-list">'+c.order.map(row).join('')+'</dl></section>':'')+'<footer class="closing"><strong>'+escape(c.title)+'</strong></footer></article>';
 }
 function editField(key,value){if(state.product[key]===value)return;checkpoint();state.product[key]=value;render();tell('초안을 갱신했습니다. 프로젝트 파일로 저장하세요.');}
-function render(){
+function render(){if(!$('#reuse-warning')){const note=document.createElement('p');note.id='reuse-warning';note.className='notice';$('#new-product').after(note)}$('#reuse-warning').hidden=!state.reuseSource;$('#reuse-warning').textContent=state.reuseSource?'이 디자인의 복제본입니다. 이전 상품명·사양이 남아 있으니 새 상품 정보로 확인·수정하세요.':'';
  productStart?.remember();
  const profile=profileFor(state);
  $('#draft-sections').replaceChildren();
@@ -74,7 +74,7 @@ const ai=setupAI({getState:()=>state,page,tell,findPhotos:()=>imageSearch.open()
 
 const imageSearch=setupImageSearch({getState:()=>state,tell,addPhotos:photos=>{const list=photos.filter(p=>!state.photos.some(old=>old.src===p.src));if(list.length+state.photos.length>30)throw Error('사진은 최대 30장입니다.');if(list.length){checkpoint();state.photos.push(...list);render()}}});
 
-const productPlacement=setupProductPlacement({getPhotos:()=>state.photos,tell,apply:(index,value,base)=>{checkpoint();if(value)state.photos[index].productPlacement=value;else delete state.photos[index].productPlacement;if(base)state.photos[index].backgroundRemoval=base;else delete state.photos[index].backgroundRemoval;render()}});
+const productPlacement=setupProductPlacement({getPhotos:()=>state.photos,tell,duplicate:async(index,value,base)=>{const old=clone(state),next=clone(state);if(value)next.photos[index].productPlacement=value;else delete next.photos[index].productPlacement;if(base)next.photos[index].backgroundRemoval=base;else delete next.photos[index].backgroundRemoval;next.reuseSource={name:state.product.name,createdAt:Date.now()};const checked=safe(next);await projectStore.set('yesdetail-simple-version:'+Date.now()+':'+crypto.randomUUID(),{savedAt:Date.now(),state:old});checkpoint();state=checked;render();setStep(1);tell('복제본을 열었습니다. 원래 작업은 보관한 버전에 있습니다. 이전 상품명·사양을 확인하고 수정하세요.');document.querySelector('[data-field="name"]').focus()},apply:(index,value,base)=>{checkpoint();if(value)state.photos[index].productPlacement=value;else delete state.photos[index].productPlacement;if(base)state.photos[index].backgroundRemoval=base;else delete state.photos[index].backgroundRemoval;render()}});
 const photoText=setupPhotoText({getPhotos:()=>state.photos,tell,apply:(index,layers)=>{checkpoint();state.photos[index].textOverlays=layers;render()}});
 
 productStart=setupProductStart({getState:()=>state,validate:safe,empty:()=>({version:1,kind:'yesdetail-simple',theme:'dark',categoryMode:'auto',product:emptyProduct(),photos:[],omitTest:false}),convertLegacy:startupLegacy,restore:(next,legacy)=>{state=next;history=[];future=[];if(legacy)document.querySelector('.notice').textContent='이전 편집기의 상품 정보와 사진을 가져왔습니다. 원본 섹션은 보존되며 이전 편집기에서 계속 편집할 수 있습니다.';render();setStep(1);tell(legacy?'이전 편집기 작업 가져옴 · 원본 별도 백업':'선택한 상품 작업을 열었습니다. 이전 작업은 보관한 버전에 보존됩니다.')},tell});

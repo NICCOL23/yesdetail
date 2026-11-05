@@ -158,6 +158,26 @@ header .header-menu{position:relative;margin:0;padding:0;border:0}header .header
 body>header{padding:6px 16px;row-gap:2px}
 body>header>#status{min-height:18px;line-height:18px}
 @media(max-width:700px){body>header{padding:8px 12px;row-gap:4px}}
+</style><style id="property-tabs-style">
+/* 오른쪽 패널에만 적용하는 탭/접기/버튼 정리 */
+.right.panel{display:flex;flex-direction:column;min-width:0;overflow:hidden;max-height:calc(100dvh - var(--capture-header-height,100px) - 28px)}
+.right>.panel-heading{flex:none}.right>.panel-heading h2{font-size:18px}.right>.panel-heading p{font-size:12px;margin:4px 0}
+.right>.capture-edit-help{flex:none;max-height:25vh;overflow:auto}
+.right #propertyPanel{min-height:0;display:flex;flex:1;margin:0}.right #properties{display:flex;flex-direction:column;min-height:0;min-width:0;width:100%;padding:0;border:0;background:transparent}
+.right .property-tabs{display:flex;gap:4px;flex:none;padding-bottom:8px;border-bottom:1px solid #d0d9e5}
+.right .property-tabs button{flex:1;min-width:0;margin:0;font-weight:600}.right .property-tabs [aria-selected=true]{background:#2459e0;color:white;border-color:#2459e0}
+.right .property-tab-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;padding:10px 3px 14px;flex:1;scroll-padding-block:12px}
+.right .property-tabpanel{min-width:0}.right .property-tabpanel>div{min-width:0}.right #text{min-height:74px;height:80px;line-height:1.5}
+.right button,.right #properties button,.right .button,.right summary{min-height:34px;padding:6px 8px;font-size:13px;line-height:20px;white-space:normal;overflow-wrap:anywhere}
+.right input:not([type=file]):not([type=checkbox]):not([type=color]),.right select{min-height:34px;padding:5px 7px;font-size:13px}.right input[type=color]{height:34px}
+.right label{font-size:13px;margin:9px 0 4px}.right .row{gap:6px}.right .text-size-color{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.right .panel-tool-fold{border-top:1px solid #d6dde6;padding:6px 0;margin-top:10px}.right .panel-tool-fold summary{font-weight:600}.right .panel-tool-fold button{margin:4px 0;width:100%}
+.right .hint{font-size:12px;line-height:1.6}.right .transparent-text-label{padding:7px 0}.right #imageProps>.button{display:block;text-align:center}
+.right .property-apply-footer{flex:none;border-top:1px solid #d0d9e5;padding:8px 2px 2px;background:white}.right .property-apply-footer #apply{margin:0;width:100%}.right .property-apply-footer #overflow{margin:6px 0 0;font-size:12px;max-height:80px;overflow:auto}
+.right #layers{max-height:none;overflow:visible}.right .layer{min-width:0;overflow-wrap:anywhere}.right #propertyAdvanced{padding:6px;margin:8px 0}.right .batch-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.right .batch-tools button{min-width:0}
+@media(max-width:1050px){.right.panel{grid-column:1/-1;max-height:720px;min-height:350px}}
+@media(max-width:650px){.right.panel{height:80dvh;max-height:80dvh;min-height:350px;overflow:hidden}.right #propertyPanel,.right #properties{display:flex;min-height:0}.right .property-tab-scroll{overflow:auto}.right button,.right #properties button,.right .button,.right summary{min-height:44px;padding:10px 7px}.right .property-apply-footer{position:static}.right .property-tabs{position:static}.right .property-tabs button{padding-inline:4px}.right .text-size-color{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style></head><body><header><strong>YesDetail · 캡처 복원 편집</strong><a class="button" href="editor.html">상품 편집기로</a><button id="undo" title="실행 취소 (Ctrl+Z)">↶ 취소</button><button id="redo" title="다시 실행 (Ctrl+Y 또는 Ctrl+Shift+Z)">↷ 다시</button><details class="header-menu"><summary class="button">프로젝트 ▾</summary><div class="header-menu-panel" id="header-project-menu"><small>수정용 프로젝트 저장 · JSON 파일을 불러와 다시 편집합니다.</small><p id="capture-storage-state" class="hint" role="status">자동 저장 상태를 확인하고 있습니다.</p><p id="capture-file-state" class="hint" role="status">파일 저장은 자동 저장과 별개입니다.</p><button id="save">프로젝트 저장</button><label class="button" style="margin:0">불러오기<input id="load" type="file" accept=".json" hidden></label><button id="new">새 캡처 프로젝트</button></div></details><button id="finishedPreview" type="button">완성본 미리보기</button><details class="header-menu"><summary class="button">PNG 저장 ▾</summary><div class="header-menu-panel"><small>완성 PNG 저장 · 판매 페이지에 올릴 이미지입니다. 다시 편집하려면 프로젝트도 저장하세요.</small><button id="png" class="primary">전체 PNG</button><button id="split">분할 PNG ZIP</button></div></details><details class="header-menu"><summary class="button">더보기 ▾</summary><div class="header-menu-panel"><button id="html">편집 HTML 저장</button><button id="browserHtml">브라우저용 HTML 저장</button><button id="exportCheck">내보내기 점검</button><button id="splitSettings">분할 위치 설정</button><label style="margin:0;font-size:12px"><input id="downloadMode" type="checkbox"> 저장창 대신 다운로드</label></div></details><span id="status" role="status">캡처를 첨부하고 상세페이지 영역을 잘라 주세요.</span></header><script>document.addEventListener('toggle',e=>{if(!e.target.matches?.('header .header-menu[open]'))return;document.querySelectorAll('header .header-menu[open]').forEach(d=>{if(d!==e.target)d.open=false})},true);document.addEventListener('click',e=>{if(!e.target.closest('header .header-menu'))document.querySelectorAll('header .header-menu[open]').forEach(d=>d.open=false)});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('header .header-menu[open]').forEach(d=>d.open=false)});</script><main>
 <aside class="panel left"><div class="capture-import-fixed"><div class="panel-heading"><small>원본 이미지</small><div class="capture-title-row"><h2>캡처 가져오기</h2><details class="capture-title-help"><summary>ⓘ 도움말</summary><p>캡처를 첨부하거나 Ctrl+V로 추가한 뒤 자르기와 순서를 정리합니다. 세부 설정의 겹침 자동 찾기로 이전 캡처와 비교하고, 연결 미리보기를 확인한 뒤 적용하세요.</p></details></div><p>첨부 → 자르기 → 순서 정리</p></div><label class="button primary">+ 캡처 여러 장 첨부<input id="files" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label><div id="pasteCaptureHint" class="paste-capture-hint" tabindex="0" role="region" aria-label="클립보드 캡처 붙여넣기"><strong>외부에서 캡처하고 Ctrl+V</strong><span>Win+Shift+S 캡처 → Ctrl+V<br>반복해서 계속 추가할 수 있어요.</span><span id="pasteCaptureFeedback" role="status" aria-live="polite"></span></div><p class="hint upload-limit">최대 100장 · 장당 30MB · 원본 보존</p></div><div class="capture-project-meta"><label>프로젝트 이름<input id="name" placeholder="캡처 상세페이지 · 이름을 입력하세요" maxlength="100"></label><label>출력 폭(px)<input id="width" type="number" min="200" max="2000" value="860"></label><p class="hint">확대는 선명도를 높이지 않습니다.</p></div><h3 class="capture-list-heading">캡처 목록 <small>드래그 또는 세부 설정에서 순서 변경</small></h3><div id="captures"></div><details><summary>원본·출력 해상도 확인</summary><p id="resolution" class="hint"></p></details><div class="warning">OCR·AI 배경 복원: 미연결<br>1차 기능은 수동 편집이며 AI 비용이 발생하지 않습니다.</div></aside>
 <section class="workspace"><div class="toolbar"><button data-tool="select" class="active">선택 / 이동</button><button data-tool="text">문구 영역</button><button data-tool="image">사진 영역</button><button data-tool="mask">단색 지우기</button><button data-tool="sample">배경색 추출</button><div class="preview-navigation"><button id="previewOut" aria-label="미리보기 축소">−</button><span id="previewZoom">폭 맞춤</span><button id="previewIn" aria-label="미리보기 확대">＋</button><button id="previewFit">폭 맞춤</button><button id="previewActual">100%</button><label class="capture-guide-toggle"><input id="showCaptureNumbers" type="checkbox" checked> 캡처 번호 표시</label><span id="capturePosition" role="status"></span></div><select id="view" aria-label="비교 보기"><option value="edited">편집본</option><option value="original">원본</option><option value="overlay">겹쳐 보기</option></select><label style="margin:0">원본 투명도 <input id="opacity" type="range" min="0" max="100" value="40"></label></div><div id="scroll"><div id="empty"><b>원본 디자인을 그대로 가져오세요.</b><p>캡처 첨부 → 상세페이지 자르기 → 겹침 조절<br>문구·사진 영역을 드래그해 수정합니다.</p></div><div id="stageSurface" hidden><canvas id="stage" hidden aria-label="캡처 편집 캔버스. 도구 선택 후 영역을 드래그하세요." tabindex="0"></canvas><div id="captureGuides" aria-hidden="true"></div></div></div><p class="hint" id="dimensions"></p></section>
@@ -571,5 +591,80 @@ function keepCaptureVisible(id){const list=$('#captures'),panel=$('.left');const
 $('.left').addEventListener('dragover',e=>{if(!e.dataTransfer)return;e.preventDefault();const panel=$('.left'),r=panel.getBoundingClientRect();if(e.clientY<r.top+65)panel.scrollTop-=28;else if(e.clientY>r.bottom-65)panel.scrollTop+=28});
 $('.left').addEventListener('wheel',e=>{const panel=$('.left');if(e.ctrlKey||!e.deltaY||panel.scrollHeight<=panel.clientHeight)return;const before=panel.scrollTop;panel.scrollTop+=e.deltaY*(e.deltaMode===1?20:e.deltaMode===2?panel.clientHeight:1);if(panel.scrollTop!==before)e.preventDefault()},{passive:false});
 
+/* PROPERTY_TABS_UI_BEGIN */
+/* 오른쪽 패널 전용: 기존 노드를 옮기며 프로젝트/출력 경로는 유지한다. */
+function installPropertyTabs(){
+ // 이동 중 document에서 분리된 노드도 기존 참조로 계속 찾는다.
+ const refs=new Map([...document.querySelectorAll('[id]')].map(n=>['#'+n.id,n]));
+ const $=selector=>refs.get(selector);
+ if($('#property-tab-text')){connectPropertyTabs();return}
+ const right=document.querySelector('.right'),properties=$('#properties'),text=$('#textProps');
+ const make=(tag,cls)=>{const n=document.createElement(tag);if(cls)n.className=cls;return n};
+ const group=(title)=>{const d=make('details','panel-tool-fold'),s=make('summary');s.textContent=title;d.append(s);return d};
+ const label=id=>$('#'+id).closest('label');
+ const originalNodes=[...properties.childNodes],textNodes=[...text.childNodes];
+ const layerList=$('#layers').parentElement;
+ const tabs=make('div','property-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','선택 영역 도구');
+ const body=make('div','property-tab-scroll'),sections={},buttons={};
+ for(const [key,title] of [['text','문구'],['background','배경·가림'],['layers','레이어']]){
+  const b=make('button');b.type='button';b.id='property-tab-'+key;b.setAttribute('role','tab');b.setAttribute('aria-controls','property-tabpanel-'+key);b.textContent=title;
+  const p=make('section','property-tabpanel');p.id='property-tabpanel-'+key;p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby',b.id);p.tabIndex=0;
+  buttons[key]=b;sections[key]=p;tabs.append(b);body.append(p);
+ }
+ const footer=make('div','property-apply-footer');footer.append($('#apply'),$('#overflow'));
+ const textNotice=make('p','hint');textNotice.textContent='문구 레이어를 선택하면 문구를 편집할 수 있어요.';sections.text.append(textNotice,text);
+ $('#text').rows=3;
+ const basics=make('div','row text-size-color');basics.append(label('size'),label('color'),label('weight'));
+ const advanced=group('자세한 글자 설정');
+ advanced.append(label('tracking'),label('line'),label('vertical'),label('autoFit'));
+ const styles=group('스타일·기타 도구');styles.append($('#editWords'),$('#rememberTextStyle'));
+ const transparentLabel=make('label','transparent-text-label'),transparent=make('input');transparent.id='transparentText';transparent.type='checkbox';
+ transparentLabel.append(transparent,document.createTextNode(' 배경 없이 글자만 추가'));
+ const pending=make('p','hint');pending.textContent='원본 사진 속 글자는 그대로 남습니다. 투명 설정은 아래 ‘선택 레이어에 적용’을 누르면 반영됩니다.';
+ const textLabel=label('text')||text.querySelector('label');
+ text.replaceChildren(textLabel,$('#text'),label('fontFamily'),basics,label('align'),transparentLabel,pending,advanced,styles);
+ // 기존 안내 문구도 남기되 접은 상세 도구 안으로 옮긴다.
+ for(const n of textNodes)if(n.nodeType===1&&n.tagName==='P')advanced.append(n);
+ const bgTools=make('div','property-selected-only');
+ bgTools.append(label('bg'),label('bgHex'),label('clear'),$('#backgroundRestoreTools'));
+ sections.background.append(bgTools);
+ const bgNotice=make('p','hint');bgNotice.textContent='레이어를 선택하면 배경색과 가림 도구를 사용할 수 있어요.';sections.background.append(bgNotice);
+ const layerTools=make('div','property-selected-only');
+ const photo=$('#imageProps');layerTools.append(photo,label('keepRatio'));
+ const coordinates=$('#propertyAdvanced');
+ const layerActions=group('레이어 도구 · 복원·복제·순서');
+ layerActions.append($('#restoreOriginal'),$('#duplicateLayer'),$('#visibility').parentElement,$('#back').parentElement,coordinates);
+ layerTools.append(layerActions);sections.layers.append(layerTools,layerList);
+ // 다른 기존 안내/도구는 버리지 않고 레이어 도구 접기에 유지한다.
+ for(const n of originalNodes)if(n.parentNode===properties)layerActions.append(n);
+ properties.replaceChildren(tabs,body,footer);
+ textNotice.id='property-text-notice';bgNotice.id='property-background-notice';bgTools.id='property-background-tools';layerTools.id='property-layer-tools';
+ connectPropertyTabs();
+}
+function connectPropertyTabs(){
+ const properties=$('#properties'),footer=properties.querySelector('.property-apply-footer'),transparent=$('#transparentText');
+ const textNotice=$('#property-text-notice'),bgNotice=$('#property-background-notice'),bgTools=$('#property-background-tools'),layerTools=$('#property-layer-tools');
+ const sections={},buttons={};for(const key of ['text','background','layers']){sections[key]=$('#property-tabpanel-'+key);buttons[key]=$('#property-tab-'+key)}
+ let active='layers',lastSelection=Symbol('initial');
+ function show(key){active=key;for(const k of Object.keys(sections)){const on=k===key;sections[k].hidden=!on;buttons[k].setAttribute('aria-selected',String(on));buttons[k].tabIndex=on?0:-1}}
+ for(const key of Object.keys(buttons)){
+  buttons[key].addEventListener('click',()=>show(key));
+  buttons[key].addEventListener('keydown',e=>{const keys=Object.keys(buttons),i=keys.indexOf(key);let next;if(e.key==='ArrowRight')next=keys[(i+1)%3];if(e.key==='ArrowLeft')next=keys[(i+2)%3];if(e.key==='Home')next=keys[0];if(e.key==='End')next=keys[2];if(next){e.preventDefault();show(next);buttons[next].focus()}});
+ }
+ transparent.addEventListener('change',()=>{$('#clear').checked=!transparent.checked});
+ $('#clear').addEventListener('change',()=>{transparent.checked=!$('#clear').checked});
+ const originalRenderProperties=renderProperties;
+ renderProperties=function(){
+  originalRenderProperties();
+  const l=state.layers.find(v=>v.id===selected);
+  properties.hidden=false;footer.hidden=!l;bgTools.hidden=!l;layerTools.hidden=!l;textNotice.hidden=!!l&&l.type==='text';bgNotice.hidden=!!l;
+  transparent.checked=!$('#clear').checked;transparent.disabled=!l||l.type!=='text'||l.locked;
+  if(lastSelection!==selected){lastSelection=selected;show(l?.type==='text'?'text':l?.type==='mask'?'background':'layers');properties.querySelector('.property-tab-scroll').scrollTop=0}else show(active);
+ };
+ renderProperties();
+}
+installPropertyTabs();
+
+/* PROPERTY_TABS_UI_END */
 init();
 </script></body></html>

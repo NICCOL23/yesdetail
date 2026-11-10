@@ -517,7 +517,33 @@ for(const k of ['x','y','w','h'])$('#c'+k).onchange=()=>{cropTemp.x=clamp(+$('#c
 function filename(){return (state.name||'캡처 상세페이지').replace(/[<>:"/\\|?*\x00-\x1f]/g,'-').slice(0,90)}
 async function picker(name,mime,ext){if(window.showSaveFilePicker&&!$('#downloadMode').checked)return showSaveFilePicker({suggestedName:name,types:[{description:ext.toUpperCase()+' 파일',accept:{[mime]:['.'+ext]}}]});return null}
 async function write(blob,name,handle){if(handle){let w=await handle.createWritable();try{await w.write(blob);await w.close()}catch(e){await w.abort().catch(()=>{});throw e}}else{const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}}
-async function action(fn){if(busy)return;busy=true;document.querySelector('main').inert=true;document.querySelectorAll('header input').forEach(e=>e.disabled=true);document.querySelectorAll('header button').forEach(b=>b.disabled=true);try{await fn()}catch(e){const message=e.name==='AbortError'?'저장을 취소했습니다.':'저장하지 못했습니다: '+e.message;$('#capture-file-state').textContent=message;status(message)}finally{busy=false;document.querySelector('main').inert=false;document.querySelectorAll('header input').forEach(e=>e.disabled=false);document.querySelectorAll('header button').forEach(b=>b.disabled=false);$('#undo').disabled=!undo.length;$('#redo').disabled=!redo.length}}
+
+let pendingSaveDialog=null;
+function hasUnappliedPreview(){
+ const l=state.layers.find(v=>v.id===selected);
+ return !!l&&[propertyPreview,textBackgroundPreview,photoPlacementPreview].some(p=>p?.id===l.id);
+}
+function choosePreviewBeforeSave(fn){
+ if(pendingSaveDialog){pendingSaveDialog.focus();return}
+ const d=document.createElement('dialog');pendingSaveDialog=d;d.setAttribute('aria-label','저장 전 미리보기 확인');d.style.cssText='width:min(94vw,520px);max-height:90dvh;overflow:auto';
+ const h=document.createElement('h2');h.textContent='아직 적용하지 않은 미리보기가 있습니다';
+ const p=document.createElement('p');p.textContent='적용하고 저장: 화면에서 미리 본 변경을 확정한 뒤 저장합니다. 기존 상태 저장: 미리보기 변경을 제외하고 마지막으로 확정한 상태를 저장합니다. 돌아가기: 저장하지 않고 계속 편집합니다.';
+ const error=document.createElement('p');error.className='hint';error.setAttribute('role','status');
+ const controls=document.createElement('div');controls.className='row';
+ function close(){pendingSaveDialog=null;d.close();d.remove()}
+ const applySave=button('적용하고 저장',()=>{
+  const l=state.layers.find(v=>v.id===selected);
+  if(!l||l.locked){error.textContent='선택한 레이어를 적용할 수 없습니다. 돌아가서 선택·잠금 상태를 확인하세요.';return}
+  if(!$('#bgHex').checkValidity()){error.textContent='배경색 HEX를 #FFFFFF처럼 6자리로 입력한 뒤 다시 저장하세요.';return}
+  $('#apply').onclick();
+  if(hasUnappliedPreview()){error.textContent='미리보기를 확정하지 못했습니다. 돌아가서 입력값을 확인하세요.';return}
+  close();action(fn,true);
+ });applySave.className='primary';
+ controls.append(applySave,button('기존 상태 저장',()=>{close();action(fn,true)}),button('돌아가기',close));
+ d.addEventListener('cancel',e=>{e.preventDefault();close()});d.append(h,p,error,controls);document.body.append(d);d.showModal();
+}
+
+async function action(fn,previewConfirmed=false){if(busy)return;if(!previewConfirmed&&hasUnappliedPreview()){choosePreviewBeforeSave(fn);return}busy=true;document.querySelector('main').inert=true;document.querySelectorAll('header input').forEach(e=>e.disabled=true);document.querySelectorAll('header button').forEach(b=>b.disabled=true);try{await fn()}catch(e){const message=e.name==='AbortError'?'저장을 취소했습니다.':'저장하지 못했습니다: '+e.message;$('#capture-file-state').textContent=message;status(message)}finally{busy=false;document.querySelector('main').inert=false;document.querySelectorAll('header input').forEach(e=>e.disabled=false);document.querySelectorAll('header button').forEach(b=>b.disabled=false);$('#undo').disabled=!undo.length;$('#redo').disabled=!redo.length}}
 $('#new').onclick=async()=>{if(state.captures.length&&store){try{await store.set('yesdetail-capture-v1-backup-'+Date.now()+'-'+uid(),clone(state));}catch(e){status('백업 실패 · 프로젝트 파일로 먼저 저장하세요. '+e.message);return;}}checkpoint();state={kind:'yesdetail-capture',version:1,name:'캡처 상세페이지',width:860,captures:[],layers:[]};selected=null;selectedCapture=null;dirty('새 캡처 프로젝트 · 실행 취소로 이전 작업을 복원할 수 있습니다.')};
 $('#save').onclick=()=>action(async()=>{const name=filename()+'-캡처프로젝트.json',handle=await picker(name,'application/json','json');await write(new Blob([JSON.stringify(state)],{type:'application/json'}),name,handle);captureFileResult(handle,'수정용 프로젝트',name)});
 function validSrc(src){return typeof src==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\s]+$/.test(src)}

@@ -280,7 +280,7 @@ function renderCaptures(){const list=$('#captures');list.replaceChildren();state
 function reorderCapture(from,to){if(from===to||from<0||to<0||from>=state.captures.length||to>=state.captures.length)return;calculate();const before=layout.map(p=>({...p}));checkpoint();const moved=state.captures.splice(from,1)[0];state.captures.splice(to,0,moved);calculate();let crossing=0;for(const l of state.layers){const old=before.find(p=>l.y>=p.y-.01&&l.y+l.h<=p.y+p.h+.01);if(!old){crossing++;continue;}const next=layout.find(p=>p.c.id===old.c.id);l.captureId=old.c.id;l.captureY=(l.y-old.y)/old.h;l.y=next.y+l.captureY*next.h;}selectedCapture=moved.id;dirty((from+1)+'번 캡처를 '+(to+1)+'번째로 이동했습니다.'+(crossing?' · 경계를 걸친 '+crossing+'개 영역은 위치 확인 필요':''));requestAnimationFrame(()=>jumpCapture(moved.id));}
 function moveCapture(i,d){reorderCapture(i,i+d)}
 function moveCaptureById(id,d){const i=state.captures.findIndex(c=>c.id===id);if(i<0)return;reorderCapture(i,i+d)}
-function renderLayers(){const list=$('#layers');list.replaceChildren();[...state.layers].reverse().forEach(l=>{const box=document.createElement('div');box.className='layer'+(l.id===selected||multiSelection.has(l.id)?' active':'');const title=document.createElement('div');title.textContent=(l.visible?'':'[숨김] ')+(l.locked?'🔒 ':'')+l.name;const sub=document.createElement('small');sub.textContent=`${({text:'문구',image:'사진',mask:'단색 지우기'})[l.type]} · ${Math.round(l.w)}×${Math.round(l.h)}`;box.append(title,sub);box.tabIndex=0;box.setAttribute('role','button');box.setAttribute('aria-label',l.name+' 편집');box.setAttribute('aria-pressed',String(l.id===selected));box.onclick=e=>{if(e.shiftKey){if(multiSelection.has(l.id))multiSelection.delete(l.id);else{if(selected)multiSelection.add(selected);multiSelection.add(l.id)}}else multiSelection.clear();selected=l.id;render();document.querySelector('.right').scrollTop=0};box.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();box.click()}};list.append(box)})}
+function renderLayers(){const list=$('#layers');list.replaceChildren();[...state.layers].reverse().forEach(l=>{const box=document.createElement('div');box.className='layer'+(l.id===selected||multiSelection.has(l.id)?' active':'');const title=document.createElement('div');title.textContent=(l.visible?'':'[숨김] ')+(l.locked?'🔒 ':'')+l.name;const sub=document.createElement('small');sub.textContent=`${({text:'문구',image:'사진',mask:'단색 지우기'})[l.type]} · ${Math.round(l.w)}×${Math.round(l.h)}`;box.append(title,sub);box.tabIndex=0;box.setAttribute('role','button');box.setAttribute('aria-label',l.name+' 편집');box.setAttribute('aria-pressed',String(l.id===selected));box.onclick=e=>{if(e.shiftKey){if(multiSelection.has(l.id))multiSelection.delete(l.id);else{if(selected)multiSelection.add(selected);multiSelection.add(l.id)}}else multiSelection.clear();selected=l.id;render();document.querySelector('.right').scrollTop=0;if(!e.shiftKey)revealLayer(l);};box.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();box.click()}};list.append(box)})}
 function renderProperties(){const bgLayer=state.layers.find(v=>v.id===selected);$('#removeSelectedPhotoBackground').disabled=!bgLayer?.src||!!bgLayer?.locked;$('#restoreSelectedPhotoBackground').hidden=!bgLayer?.photoBackgroundOriginal;$('#restoreSelectedPhotoBackground').disabled=!!bgLayer?.locked;const l=state.layers.find(v=>v.id===selected);$('#properties').hidden=!l;if(!l)return;for(const k of ['x','y','w','h','bg','text','size','color','align','weight','line','fit','scale','panX','panY'])if(l[k]!==undefined&&document.activeElement!==$('#'+k))$('#'+k).value=l[k];$('#bgHex').value=l.bg;$('#layerName').value=l.name;$('#clear').checked=l.clear;$('#textProps').hidden=l.type!=='text';$('#imageProps').hidden=l.type!=='image';$('#visibility').textContent=l.visible?'숨기기':'표시';$('#lock').textContent=l.locked?'잠금 해제':'잠금';$('#backgroundRestoreTools').hidden=!['text','mask'].includes(l.type);$('#restoreBackground').disabled=l.locked;$('#restoreFlatBackground').hidden=!l.bgRestore;$('#restoreFlatBackground').disabled=l.locked;$('#backgroundRestoreInfo').textContent=l.bgRestore?'주변 복원 적용됨 · 영역 이동·크기 변경 시 복원 이미지도 함께 이동·확대됩니다. 필요하면 다시 복원하세요.':'주변의 색·명암을 이어 메웁니다. 무늬·제품 세부 복원은 지원하지 않습니다. 결과 확인 후 적용합니다.';$('#apply').disabled=l.locked;$('#delete').disabled=l.locked;$('#duplicateLayer').disabled=l.locked;$('#restoreOriginal').disabled=l.locked;$('#overflow').hidden=l.type!=='text'||textHeight(l)<=l.h;$('#fontFamily').value=l.fontFamily||'malgun';$('#tracking').value=l.tracking||0;$('#vertical').value=l.vertical||'top';$('#autoFit').checked=!!l.autoFit}
 
 // Keep photo placement drafts out of project state and export rendering.
@@ -639,6 +639,29 @@ async function drawViewport(){
 }
 function scheduleViewport(){if(viewportFrame)return;viewportFrame=requestAnimationFrame(()=>{viewportFrame=0;drawViewport()})}
 window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
+function revealLayer(layer){
+ const surface=$('#stageSurface'),host=$('#scroll');
+ const rect=surface.getBoundingClientRect();
+ const header=document.querySelector('header');
+ const toolbar=$('.toolbar');
+ const inset=[header,toolbar].reduce((height,element)=>{
+  const position=getComputedStyle(element).position;
+  return height+(['sticky','fixed'].includes(position)?element.getBoundingClientRect().height:0);
+ },12);
+ const top=rect.top+layer.y*displayScale,bottom=top+layer.h*displayScale;
+ const available=window.innerHeight-inset-12;
+ if(top<inset||bottom>window.innerHeight-12){
+  const offset=Math.max(0,(available-layer.h*displayScale)/2);
+  window.scrollTo({top:Math.max(0,window.scrollY+top-inset-offset),behavior:'auto'});
+ }
+ const left=rect.left+layer.x*displayScale,right=left+layer.w*displayScale;
+ const hostLeft=host.getBoundingClientRect().left+host.clientLeft;
+ if(left<hostLeft||right>hostLeft+host.clientWidth){
+  host.scrollLeft+=(left+right-host.clientWidth)/2-hostLeft;
+ }
+ scheduleViewport();
+ if(!layer.visible)status('숨겨진 레이어 위치입니다. 본문에 표시하려면 레이어를 표시로 바꾸세요.');
+}
 function jumpCapture(id){calculate();const p=layout.find(p=>p.c.id===id);if(!p)return;selectedCapture=id;renderCaptures();keepCaptureVisible(id);const top=$('#stageSurface').getBoundingClientRect().top+window.scrollY+p.y*displayScale-$('.toolbar').getBoundingClientRect().height-(document.querySelector('header').getBoundingClientRect().height)-12;window.scrollTo({top:Math.max(0,top),behavior:'auto'});scheduleViewport()}
 $('#previewFit').onclick=()=>changeZoom('fit',1);$('#previewActual').onclick=()=>changeZoom('custom',1);
 for(const [id,delta] of [['previewIn',.1],['previewOut',-.1]])$('#'+id).onclick=()=>{changeZoom('custom',clamp(displayScale+delta,.2,2))};

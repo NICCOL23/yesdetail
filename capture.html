@@ -158,6 +158,11 @@ header .header-menu{position:relative;margin:0;padding:0;border:0}header .header
 body>header{padding:6px 16px;row-gap:2px}
 body>header>#status{min-height:18px;line-height:18px}
 @media(max-width:700px){body>header{padding:8px 12px;row-gap:4px}}
+
+#layers .layer-content-preview{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;font-size:.78rem;color:#344762}
+#layers .layer-content-preview img,#layers .layer-color-swatch{display:inline-block;width:26px;height:20px;box-sizing:border-box;vertical-align:middle;margin-right:6px;border:1px solid #8797ad;border-radius:3px}
+#layers .layer-content-preview img{object-fit:contain;background:#f1f4f8}
+#layers .layer-color-swatch{width:16px;height:14px}
 </style><style id="property-tabs-style">
 /* 오른쪽 패널에만 적용하는 탭/접기/버튼 정리 */
 .right.panel{display:flex;flex-direction:column;min-width:0;overflow:hidden;max-height:calc(100dvh - var(--capture-header-height,100px) - 28px)}
@@ -280,7 +285,33 @@ function renderCaptures(){const list=$('#captures');list.replaceChildren();state
 function reorderCapture(from,to){if(from===to||from<0||to<0||from>=state.captures.length||to>=state.captures.length)return;calculate();const before=layout.map(p=>({...p}));checkpoint();const moved=state.captures.splice(from,1)[0];state.captures.splice(to,0,moved);calculate();let crossing=0;for(const l of state.layers){const old=before.find(p=>l.y>=p.y-.01&&l.y+l.h<=p.y+p.h+.01);if(!old){crossing++;continue;}const next=layout.find(p=>p.c.id===old.c.id);l.captureId=old.c.id;l.captureY=(l.y-old.y)/old.h;l.y=next.y+l.captureY*next.h;}selectedCapture=moved.id;dirty((from+1)+'번 캡처를 '+(to+1)+'번째로 이동했습니다.'+(crossing?' · 경계를 걸친 '+crossing+'개 영역은 위치 확인 필요':''));requestAnimationFrame(()=>jumpCapture(moved.id));}
 function moveCapture(i,d){reorderCapture(i,i+d)}
 function moveCaptureById(id,d){const i=state.captures.findIndex(c=>c.id===id);if(i<0)return;reorderCapture(i,i+d)}
-function renderLayers(){const list=$('#layers');list.replaceChildren();[...state.layers].reverse().forEach(l=>{const box=document.createElement('div');box.className='layer'+(l.id===selected||multiSelection.has(l.id)?' active':'');const title=document.createElement('div');title.textContent=(l.visible?'':'[숨김] ')+(l.locked?'🔒 ':'')+l.name;const sub=document.createElement('small');sub.textContent=`${({text:'문구',image:'사진',mask:'단색 지우기'})[l.type]} · ${Math.round(l.w)}×${Math.round(l.h)}`;box.append(title,sub);box.tabIndex=0;box.setAttribute('role','button');box.setAttribute('aria-label',l.name+' 편집');box.setAttribute('aria-pressed',String(l.id===selected));box.onclick=e=>{if(e.shiftKey){if(multiSelection.has(l.id))multiSelection.delete(l.id);else{if(selected)multiSelection.add(selected);multiSelection.add(l.id)}}else multiSelection.clear();selected=l.id;
+function appendLayerPreview(box, layer) {
+ const preview = document.createElement('span');
+ preview.className = 'layer-content-preview';
+ if (layer.type === 'text') {
+  const line = layer.text.split(/\r\n?|\n/).map(value => value.trim()).find(Boolean);
+  preview.textContent = line || '문구 없음';
+  if (line) preview.title = line;
+ } else if (layer.type === 'image' || layer.bgRestore) {
+  const source = layer.type === 'image' ? layer.src : layer.bgRestore;
+  if (source) {
+   const thumbnail = document.createElement('img');
+   thumbnail.alt = '';
+   thumbnail.loading = 'lazy';
+   thumbnail.decoding = 'async';
+   thumbnail.src = source;
+   preview.append(thumbnail, layer.type === 'image' ? '사진 미리보기' : '복원 배경');
+  } else preview.textContent = '사진 없음';
+ } else if (layer.type === 'mask') {
+  const swatch = document.createElement('span');
+  swatch.className = 'layer-color-swatch';
+  swatch.style.backgroundColor = layer.bg;
+  preview.append(swatch, layer.bg);
+ } else return;
+ box.append(preview);
+ box.setAttribute('aria-describedby', preview.id = 'layer-preview-' + layer.id);
+}
+function renderLayers(){const list=$('#layers');list.replaceChildren();[...state.layers].reverse().forEach(l=>{const box=document.createElement('div');box.className='layer'+(l.id===selected||multiSelection.has(l.id)?' active':'');const title=document.createElement('div');title.textContent=(l.visible?'':'[숨김] ')+(l.locked?'🔒 ':'')+l.name;const sub=document.createElement('small');sub.textContent=`${({text:'문구',image:'사진',mask:'단색 지우기'})[l.type]} · ${Math.round(l.w)}×${Math.round(l.h)}`;box.append(title,sub);appendLayerPreview(box,l);box.tabIndex=0;box.setAttribute('role','button');box.setAttribute('aria-label',l.name+' 편집');box.setAttribute('aria-pressed',String(l.id===selected));box.onclick=e=>{if(e.shiftKey){if(multiSelection.has(l.id))multiSelection.delete(l.id);else{if(selected)multiSelection.add(selected);multiSelection.add(l.id)}}else multiSelection.clear();selected=l.id;
 const scroller=document.querySelector('.property-tab-scroll');
 const scrollTop=scroller.scrollTop;
 const restoreFocus=document.activeElement===box;
